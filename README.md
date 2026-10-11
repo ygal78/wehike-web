@@ -29,7 +29,7 @@ leaving orphaned stale bundles behind — also hit this for real), copy the
 fresh `dist/` output over, regenerate the SPA fallback, commit, and push:
 
 ```bash
-find . -mindepth 1 -maxdepth 1 ! -name '.git' ! -name '.nojekyll' ! -name 'CNAME' ! -name '404.html' ! -name 'README.md' -exec rm -rf {} +
+find . -mindepth 1 -maxdepth 1 ! -name '.git' ! -name '.github' ! -name '.nojekyll' ! -name 'CNAME' ! -name '404.html' ! -name 'README.md' -exec rm -rf {} +
 cp -r ../we-hike/dist/. .
 cp index.html 404.html   # SPA fallback — see below
 git add -A
@@ -39,6 +39,13 @@ git push
 
 ## Why the extra files
 
+- **`.github/workflows/supabase-keepalive.yml`** — not part of the site. A
+  scheduled GitHub Actions job that reads one row from Supabase twice a day
+  so the free-tier project isn't paused after 7 idle days (it lives here
+  because the app repo has no GitHub remote). The wipe command above keeps
+  `.github` for this reason. It needs the `SUPABASE_URL` and
+  `SUPABASE_ANON_KEY` repository secrets, and emails the repo owner if a
+  ping fails.
 - **`CNAME`** — GitHub Pages custom domain. Must contain exactly
   `wehike.authentic.gg`.
 - **`.nojekyll`** — GitHub Pages runs Jekyll by default, which ignores any

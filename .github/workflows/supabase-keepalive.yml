@@ -1,0 +1,45 @@
+# Keeps the free-tier Supabase project awake. Supabase pauses free projects
+# after 7 days without activity (it paused in early October 2026 and took the
+# app and this site's data down). One small read through the Data API twice a
+# day counts as activity.
+#
+# Twice a day, not once: GitHub can delay or skip a scheduled run under load.
+# The job fails on anything but HTTP 200, so GitHub emails the repo owner the
+# day the database stops answering.
+#
+# Lives in this repo because the app repo (we-hike) has no GitHub remote.
+# The deploy steps in README.md must keep the .github folder.
+# Note: GitHub disables scheduled workflows after 60 days with no commits to
+# the repo. A redeploy counts; otherwise re-enable it under the Actions tab.
+#
+# Secrets (Settings > Secrets and variables > Actions):
+#   SUPABASE_URL       the project URL (same as EXPO_PUBLIC_SUPABASE_URL)
+#   SUPABASE_ANON_KEY  the public anon/publishable key, never the service key
+name: Supabase keep-alive
+
+on:
+  schedule:
+    - cron: "17 5,17 * * *" # 05:17 and 17:17 UTC
+  workflow_dispatch: {}
+
+permissions: {}
+
+jobs:
+  ping:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Read one row through the Data API
+        env:
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_ANON_KEY: ${{ secrets.SUPABASE_ANON_KEY }}
+        run: |
+          code=$(curl -s -o /tmp/body -w "%{http_code}" --max-time 60 \
+            "$SUPABASE_URL/rest/v1/trails?select=id&limit=1" \
+            -H "apikey: $SUPABASE_ANON_KEY")
+          echo "HTTP $code"
+          if [ "$code" != "200" ]; then
+            echo "Supabase did not answer 200. The project may be paused or down."
+            head -c 300 /tmp/body
+            exit 1
+          fi
